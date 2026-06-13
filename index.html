@@ -179,12 +179,12 @@
     </div>
 
     <div class="footer">
-      Site IA connecté en mode direct.
+      Site IA connecté à Runway (Gen-3 via Proxy).
     </div>
   </div>
 
   <script>
-    // 🔑 METS TA CLÉ API ENTRE LES GUILLEMETS CI-DESSOUS :
+    // 🔑 Ta clé API Runway
     const API_KEY = "key_c250d95a67aabf417d8e1253daaec420b4af48b8882da7b85ef1c956672b7f659066c4157dad8a9218a77344f7d74fa3380f01c3ae65e40b744dd3fac80ccd89"; 
 
     const resultDiv = document.getElementById("result");
@@ -200,12 +200,6 @@
         resultDiv.innerHTML = '<p class="error">Écris d’abord une description.</p>';
         return null;
       }
-
-      if (API_KEY === "CONSIGNE_CLE_API") {
-        resultDiv.innerHTML = '<p class="error">Erreur : Tu as oublié de coller ta clé API dans le code JavaScript.</p>';
-        return null;
-      }
-
       return { prompt, style, format };
     }
 
@@ -214,102 +208,104 @@
       btnVideo.disabled = disabled;
     }
 
+    function getResolution(format) {
+      if (format === "vertical") return { width: 768, height: 1344 };
+      if (format === "square") return { width: 1024, height: 1024 };
+      return { width: 1280, height: 768 };
+    }
+
     async function generateImage() {
-      const data = getUserData();
-      if (!data) return;
-
-      resultDiv.innerHTML = '<p class="loading">Génération de l’image en cours par l\'IA...</p>';
-      toggleButtons(true);
-
-      try {
-        // NOTE TECHNIQUE : Remplace cette URL par celle de ton fournisseur d'IA
-        // Exemple pour OpenAI (DALL-E 3) : "https://api.openai.com/v1/images/generations"
-        const response = await fetch("RMPLACER_PAR_URL_API_DE_TON_FOURNISSEUR", {
-          method: "POST",
-          headers: {
-           const response = await fetch("https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/image_to_video", {
-            "Authorization": `Bearer ${API_KEY}` // Ta clé est injectée ici de manière automatique
-          },
-          body: JSON.stringify({
-            prompt: `${data.prompt}, style: ${data.style}`,
-            // Adapte la structure du body selon la documentation de ton IA
-          })
-        });
-
-        const result = await response.json();
-
-        // Adapte "result.imageUrl" selon la réponse exacte que donne ton API
-        if (!result.imageUrl && !result.data) {
-          throw new Error("Aucun lien d'image trouvé dans la réponse.");
-        }
-
-        const finalUrl = result.imageUrl || result.data[0].url;
-
-        resultDiv.innerHTML = `
-          <div>
-            <img src="${finalUrl}" alt="Image générée par IA">
-            <br><br>
-            <a href="${finalUrl}" download="image-ia.png" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
-              💾 Télécharger l’image
-            </a>
-          </div>
-        `;
-      } catch (error) {
-        resultDiv.innerHTML = `
-          <p class="error">
-            Erreur lors de la génération : ${error.message}<br>
-            <small>Vérifie la validité de ta clé et l'URL de l'API configurée.</small>
-          </p>
-        `;
-     const response = await fetch(`https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/tasks/${taskId}`, {
-        toggleButtons(false);
-      }
+      resultDiv.innerHTML = '<p class="error">Runway API est configurée ici pour la génération vidéo. Utilise le bouton violet.</p>';
     }
 
     async function generateVideo() {
       const data = getUserData();
       if (!data) return;
 
-      resultDiv.innerHTML = '<p class="loading">Génération de la vidéo en cours par l\'IA...</p>';
+      resultDiv.innerHTML = '<p class="loading">Création de la tâche sur Runway (Envoi du prompt)...</p>';
       toggleButtons(true);
 
+      const dimensions = getResolution(data.format);
+
       try {
-        // Remplace par l'URL vidéo de ton fournisseur d'IA (ex: Luma, Runway, Fal...)
-        const response = await fetch("RMPLACER_PAR_URL_API_VIDEO", {
+        // Envoi de la demande de génération de vidéo (Gen-3 Alpha Turbo) via le proxy CORS Anywhere
+        const response = await fetch("https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/image_to_video", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${API_KEY}`
+            "Authorization": `Bearer ${API_KEY}`,
+            "X-Runway-Version": "2024-11-06"
           },
           body: JSON.stringify({
-            prompt: data.prompt
+            promptText: `${data.prompt}, style: ${data.style}`,
+            width: dimensions.width,
+            height: dimensions.height,
+            model: "gen3a_turbo"
           })
         });
 
         const result = await response.json();
 
-        if (!result.videoUrl) {
-          throw new Error("Aucune vidéo reçue.");
+        if (!response.ok || !result.id) {
+          throw new Error(result.message || "Impossible d'initier la génération Runway. Assure-toi d'avoir activé l'accès sur cors-anywhere.herokuapp.com");
         }
 
-        resultDiv.innerHTML = `
-          <div>
-            <video src="${result.videoUrl}" controls></video>
-            <br><br>
-            <a href="${result.videoUrl}" download="video-ia.mp4" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
-              💾 Télécharger la vidéo
-            </a>
-          </div>
-        `;
+        // Suivi de l'évolution de la vidéo avec l'ID reçu
+        checkVideoStatus(result.id);
+
       } catch (error) {
         resultDiv.innerHTML = `
           <p class="error">
-            Erreur lors de la génération vidéo : ${error.message}
+            Erreur : ${error.message}<br><br>
+            <small>⚠️ Si c'est un problème d'accès au proxy, ouvre un nouvel onglet, va sur <strong><a href="https://cors-anywhere.herokuapp.com/" target="_blank" style="color: #f87171;">cors-anywhere.herokuapp.com</a></strong> et clique sur le bouton "Request temporary access", puis réessaie.</small>
           </p>
         `;
-      } finally {
         toggleButtons(false);
       }
+    }
+
+    async function checkVideoStatus(taskId) {
+      resultDiv.innerHTML = '<p class="loading">L\'IA Runway génère ton clip... (Patiente environ 30 à 60 secondes)</p>';
+
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch(`https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/tasks/${taskId}`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${API_KEY}`,
+              "X-Runway-Version": "2024-11-06"
+            }
+          });
+
+          const task = await response.json();
+
+          if (task.status === "SUCCEEDED") {
+            clearInterval(interval);
+            toggleButtons(false);
+            
+            const videoUrl = task.output[0];
+
+            resultDiv.innerHTML = `
+              <div>
+                <video src="${videoUrl}" controls autoplay loop></video>
+                <br><br>
+                <a href="${videoUrl}" download="video-runway.mp4" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
+                  💾 Télécharger la vidéo Runway
+                </a>
+              </div>
+            `;
+          } else if (task.status === "FAILED") {
+            clearInterval(interval);
+            toggleButtons(false);
+            resultDiv.innerHTML = `<p class="error">La génération Runway a échoué : ${task.error || "Erreur inconnue"}</p>`;
+          }
+
+        } catch (error) {
+          clearInterval(interval);
+          toggleButtons(false);
+          resultDiv.innerHTML = `<p class="error">Erreur lors de la vérification : ${error.message}</p>`;
+        }
+      }, 4000); // Vérification toutes les 4 secondes
     }
   </script>
 </body>
