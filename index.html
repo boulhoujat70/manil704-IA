@@ -34,7 +34,7 @@
     <h1>IA Générateur Images & Vidéos</h1>
     <p class="subtitle">Écris ton idée, choisis le style, puis génère ton contenu.</p>
     
-    <div id="api-status" class="api-status">🔑 Session connectée à Runway</div>
+    <div id="api-status" class="api-status">🔑 Connecté à la session Fal.ai</div>
 
     <textarea id="prompt" placeholder="Exemple : un homme d'affaires futuriste dans une ville cyberpunk..."></textarea>
 
@@ -59,7 +59,7 @@
     </div>
 
     <div class="result" id="result">Ton résultat apparaîtra ici.</div>
-    <div class="footer">Site sécurisé — Tunnel CORS activé.</div>
+    <div class="footer">Site sécurisé — Connecté aux serveurs Fal.ai.</div>
   </div>
 
   <script>
@@ -68,30 +68,30 @@
     const btnVideo = document.getElementById("btn-video");
     const statusDiv = document.getElementById("api-status");
 
-    // Invite de connexion
+    // Demande de connexion par clé Fal.ai
     function getApiKey() {
-      let key = sessionStorage.getItem("RUNWAY_API_KEY");
+      let key = sessionStorage.getItem("FAL_API_KEY");
       if (!key) {
-        key = prompt("🔑 Connexion : Veuillez coller votre clé API Runway :");
+        key = prompt("🔑 Connexion : Veuillez coller votre clé API FAL.AI :");
         if (key && key.trim() !== "") {
-          sessionStorage.setItem("RUNWAY_API_KEY", key.trim());
+          sessionStorage.setItem("FAL_API_KEY", key.trim());
         }
       }
       if (key) statusDiv.style.display = "block";
       return key;
     }
 
-    // Chargement de la clé
+    // Lancement de la connexion
     getApiKey();
 
     function getUserData() {
       const promptText = document.getElementById("prompt").value.trim();
       const style = document.getElementById("style").value;
       const format = document.getElementById("format").value;
-      const currentKey = sessionStorage.getItem("RUNWAY_API_KEY");
+      const currentKey = sessionStorage.getItem("FAL_API_KEY");
 
       if (!currentKey) {
-        resultDiv.innerHTML = '<p class="error">Erreur : Connexion requise. Actualisez la page pour entrer votre clé.</p>';
+        resultDiv.innerHTML = '<p class="error">Erreur : Clé API manquante. Actualisez pour vous connecter.</p>';
         return null;
       }
       if (!promptText) {
@@ -106,108 +106,113 @@
       btnVideo.disabled = disabled;
     }
 
-    function getResolution(format) {
-      if (format === "vertical") return { width: 768, height: 1344 };
-      if (format === "square") return { width: 1024, height: 1024 };
-      return { width: 1280, height: 768 };
+    function getAspectRadio(format) {
+      return format === "vertical" ? "9:16" : format === "square" ? "1:1" : "16:9";
     }
 
+    // 1. BOUTON BLEU : Génération d'image ultra rapide (Modèle Flux Schnell)
     async function generateImage() {
-      resultDiv.innerHTML = '<p class="error">Runway est un moteur vidéo. Utilisez le bouton violet.</p>';
-    }
-
-    async function generateVideo() {
       const data = getUserData();
       if (!data) return;
 
-      resultDiv.innerHTML = '<p class="loading">Création de la tâche via la passerelle de contournement...</p>';
+      resultDiv.innerHTML = '<p class="loading">L\'IA génère ton image...</p>';
       toggleButtons(true);
 
-      const dimensions = getResolution(data.format);
-      
-      // Utilisation d'un reverse proxy transparent qui ne modifie pas la structure POST
-      const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent("https://api.v1.runwayml.com/v1/image_to_video");
-
       try {
-        const response = await fetch(proxyUrl, {
+        const response = await fetch("https://queue.fal.run/fal-ai/flux/schnell", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${data.key}`,
-            "X-Runway-Version": "2024-11-06"
+            "Authorization": `Key ${data.key}`
           },
           body: JSON.stringify({
-            promptText: `${data.prompt}, style: ${data.style}`,
-            width: dimensions.width,
-            height: dimensions.height,
-            model: "gen3a_turbo"
+            prompt: `${data.prompt}, style: ${data.style}`,
+            image_size: data.format === "vertical" ? "portrait_4_5" : data.format === "square" ? "square" : "landscape_16_9",
+            sync_mode: true
           })
         });
 
-        if (response.status === 401 || response.status === 403) {
-          throw new Error("Clé API invalide ou refusée par Runway. Vérifiez vos crédits.");
-        }
-
         const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || "Erreur lors de la génération.");
 
-        if (!response.ok || !result.id) {
-          throw new Error(result.message || "Erreur lors du traitement par Runway.");
-        }
-
-        checkVideoStatus(result.id, data.key);
-
-      } catch (error) {
+        const imageUrl = result.images[0].url;
         resultDiv.innerHTML = `
-          <p class="error">
-            ⚠️ Échec de génération : ${error.message}<br>
-            <small>Si l'erreur persiste, l'API de Runway requiert impérativement un hébergement Vercel (Backend).</small>
-          </p>
-        `;
+          <div>
+            <img src="${imageUrl}" alt="Image générée">
+            <br><br>
+            <a href="${imageUrl}" download="image.png" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">💾 Télécharger l’image</a>
+          </div>`;
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Erreur : ${error.message}</p>`;
+      } finally {
         toggleButtons(false);
       }
     }
 
-    async function checkVideoStatus(taskId, key) {
-      resultDiv.innerHTML = '<p class="loading">L\'IA Runway génère votre vidéo... (30-60 secondes)</p>';
+    // 2. BOUTON VIOLET : Génération vidéo (Modèle Luma Dream Machine)
+    async function generateVideo() {
+      const data = getUserData();
+      if (!data) return;
+
+      resultDiv.innerHTML = '<p class="loading">Démarrage de la vidéo sur Fal.ai...</p>';
+      toggleButtons(true);
+
+      try {
+        const response = await fetch("https://queue.fal.run/fal-ai/luma-dream-machine", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Key ${data.key}`
+          },
+          body: JSON.stringify({
+            prompt: `${data.prompt}, style: ${data.style}, 8k, cinematic`,
+            aspect_ratio: getAspectRadio(data.format)
+          })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || "Vérifiez vos crédits ou votre clé API.");
+
+        checkVideoStatus(result.request_id, data.key);
+
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Échec : ${error.message}</p>`;
+        toggleButtons(false);
+      }
+    }
+
+    async function checkVideoStatus(requestId, key) {
+      resultDiv.innerHTML = '<p class="loading">L\'IA génère ton clip vidéo... (Environ 30 secondes)</p>';
 
       const interval = setInterval(async () => {
         try {
-          const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(`https://api.v1.runwayml.com/v1/tasks/${taskId}`);
-          
-          const response = await fetch(proxyUrl, {
+          const response = await fetch(`https://queue.fal.run/fal-ai/luma-dream-machine/requests/${requestId}`, {
             method: "GET",
-            headers: {
-              "Authorization": `Bearer ${key}`,
-              "X-Runway-Version": "2024-11-06"
-            }
+            headers: { "Authorization": `Key ${key}` }
           });
 
           const task = await response.json();
 
-          if (task.status === "SUCCEEDED") {
+          if (task.status === "COMPLETED" && task.video) {
             clearInterval(interval);
             toggleButtons(false);
-            
-            const videoUrl = task.output[0];
             resultDiv.innerHTML = `
               <div>
-                <video src="${videoUrl}" controls autoplay loop></video>
+                <video src="${task.video.url}" controls autoplay loop></video>
                 <br><br>
-                <a href="${videoUrl}" download="video.mp4" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">💾 Télécharger la vidéo</a>
-              </div>
-            `;
+                <a href="${task.video.url}" download="video.mp4" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">💾 Télécharger la vidéo 9:16</a>
+              </div>`;
           } else if (task.status === "FAILED") {
             clearInterval(interval);
             toggleButtons(false);
-            resultDiv.innerHTML = `<p class="error">La génération a échoué sur Runway : ${task.error || "Crédits épuisés ou prompt bloqué."}</p>`;
+            resultDiv.innerHTML = '<p class="error">La création de la vidéo a échoué.</p>';
           }
-
         } catch (error) {
           clearInterval(interval);
           toggleButtons(false);
           resultDiv.innerHTML = `<p class="error">Erreur de suivi : ${error.message}</p>`;
         }
-      }, 5000);
+      }, 4000);
     }
   </script>
 </body>
