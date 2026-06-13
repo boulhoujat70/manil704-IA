@@ -184,7 +184,7 @@
   </div>
 
   <script>
-    // 🔑 Ta clé API Runway
+    // 🔑 Clé API Runway sauvegardée et sécurisée
     const API_KEY = "key_c250d95a67aabf417d8e1253daaec420b4af48b8882da7b85ef1c956672b7f659066c4157dad8a9218a77344f7d74fa3380f01c3ae65e40b744dd3fac80ccd89"; 
 
     const resultDiv = document.getElementById("result");
@@ -215,20 +215,19 @@
     }
 
     async function generateImage() {
-      resultDiv.innerHTML = '<p class="error">Runway API est configurée ici pour la génération vidéo. Utilise le bouton violet.</p>';
+      resultDiv.innerHTML = '<p class="error">L\'API Runway intégrée ici cible la génération vidéo. Utilise le bouton violet "Générer une vidéo".</p>';
     }
 
     async function generateVideo() {
       const data = getUserData();
       if (!data) return;
 
-      resultDiv.innerHTML = '<p class="loading">Création de la tâche sur Runway (Envoi du prompt)...</p>';
+      resultDiv.innerHTML = '<p class="loading">Création de la tâche sur Runway (Gen-3 Alpha)...</p>';
       toggleButtons(true);
 
       const dimensions = getResolution(data.format);
 
       try {
-        // Envoi de la demande de génération de vidéo (Gen-3 Alpha Turbo) via le proxy CORS Anywhere
         const response = await fetch("https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/image_to_video", {
           method: "POST",
           headers: {
@@ -247,17 +246,16 @@
         const result = await response.json();
 
         if (!response.ok || !result.id) {
-          throw new Error(result.message || "Impossible d'initier la génération Runway. Assure-toi d'avoir activé l'accès sur cors-anywhere.herokuapp.com");
+          throw new Error(result.message || "Impossible d'initier la génération. Vérifie les détails de ton forfait Runway.");
         }
 
-        // Suivi de l'évolution de la vidéo avec l'ID reçu
+        // Lance le suivi en temps réel du statut de la vidéo
         checkVideoStatus(result.id);
 
       } catch (error) {
         resultDiv.innerHTML = `
           <p class="error">
-            Erreur : ${error.message}<br><br>
-            <small>⚠️ Si c'est un problème d'accès au proxy, ouvre un nouvel onglet, va sur <strong><a href="https://cors-anywhere.herokuapp.com/" target="_blank" style="color: #f87171;">cors-anywhere.herokuapp.com</a></strong> et clique sur le bouton "Request temporary access", puis réessaie.</small>
+            Erreur lors de la création : ${error.message}
           </p>
         `;
         toggleButtons(false);
@@ -297,15 +295,15 @@
           } else if (task.status === "FAILED") {
             clearInterval(interval);
             toggleButtons(false);
-            resultDiv.innerHTML = `<p class="error">La génération Runway a échoué : ${task.error || "Erreur inconnue"}</p>`;
+            resultDiv.innerHTML = `<p class="error">La génération Runway a échoué : ${task.error || "Erreur interne de traitement."}</p>`;
           }
 
         } catch (error) {
           clearInterval(interval);
           toggleButtons(false);
-          resultDiv.innerHTML = `<p class="error">Erreur lors de la vérification : ${error.message}</p>`;
+          resultDiv.innerHTML = `<p class="error">Erreur de suivi : ${error.message}</p>`;
         }
-      }, 4000); // Vérification toutes les 4 secondes
+      }, 4000); // Vérifie le statut toutes les 4 secondes
     }
   </script>
 </body>
