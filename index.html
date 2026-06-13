@@ -31,7 +31,7 @@
     <h1>IA Générateur Images & Vidéos</h1>
     <p class="subtitle">Écris ton idée, choisis le style, puis génère ton contenu.</p>
 
-    <textarea id="prompt" placeholder="Exemple : un homme d'affaires futuriste dans une ville cyberpunk, style cinéma, ultra réaliste..."></textarea>
+    <textarea id="prompt" placeholder="Exemple : un homme d'affaires futuriste dans une ville cyberpunk..."></textarea>
 
     <select id="style">
       <option value="realistic">Ultra réaliste</option>
@@ -76,18 +76,18 @@
     }
 
     async function generateImage() {
-      resultDiv.innerHTML = '<p class="error">Fonctionnalité configurée pour la vidéo sur le bouton violet.</p>';
+      resultDiv.innerHTML = '<p class="error">L\'API Runway intégrée crée des vidéos. Utilise le bouton violet.</p>';
     }
 
     async function generateVideo() {
       const data = getUserData();
       if (!data) return;
 
-      resultDiv.innerHTML = '<p class="loading">Création de la tâche vidéo sur le serveur...</p>';
+      resultDiv.innerHTML = '<p class="loading">Démarrage de la tâche vidéo sur le serveur sécurisé...</p>';
       toggleButtons(true);
 
       try {
-        // On appelle notre route backend Vercel locale relative
+        // Appelle le script backend localisé dans le dossier /api
         const response = await fetch("/api/generate-video", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -99,13 +99,13 @@
 
         checkVideoStatus(result.id);
       } catch (error) {
-        resultDiv.innerHTML = `<p class="error">Erreur : ${error.message}</p>`;
+        resultDiv.innerHTML = `<p class="error">Erreur serveur : ${error.message}</p>`;
         toggleButtons(false);
       }
     }
 
     async function checkVideoStatus(taskId) {
-      resultDiv.innerHTML = '<p class="loading">L\'IA génère ton clip... (Patiente environ 30 à 60 secondes)</p>';
+      resultDiv.innerHTML = '<p class="loading">L\'IA Runway génère ton clip... (Patiente environ 30 à 60 secondes)</p>';
 
       const interval = setInterval(async () => {
         try {
@@ -124,7 +124,7 @@
           } else if (task.status === "FAILED") {
             clearInterval(interval);
             toggleButtons(false);
-            resultDiv.innerHTML = `<p class="error">La génération a échoué.</p>`;
+            resultDiv.innerHTML = `<p class="error">La génération a échoué sur Runway.</p>`;
           }
         } catch (error) {
           clearInterval(interval);
