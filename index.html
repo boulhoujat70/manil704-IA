@@ -179,13 +179,13 @@
     </div>
 
     <div class="footer">
-      Site IA connecté à Runway (Gen-3 via Proxy).
+      Site IA connecté à l'écosystème Fal.ai.
     </div>
   </div>
 
   <script>
-    // 🔑 Clé API Runway sauvegardée et sécurisée
-    const API_KEY = "key_c250d95a67aabf417d8e1253daaec420b4af48b8882da7b85ef1c956672b7f659066c4157dad8a9218a77344f7d74fa3380f01c3ae65e40b744dd3fac80ccd89"; 
+    // 🔑 COLLE TA CLÉ API FAL.AI ICI :
+    const API_KEY = "TA_CLE_FAL_ICI"; 
 
     const resultDiv = document.getElementById("result");
     const btnImage = document.getElementById("btn-image");
@@ -200,6 +200,10 @@
         resultDiv.innerHTML = '<p class="error">Écris d’abord une description.</p>';
         return null;
       }
+      if (API_KEY === "TA_CLE_FAL_ICI") {
+        resultDiv.innerHTML = '<p class="error">Erreur : Remplace "TA_CLE_FAL_ICI" par ta clé API Fal.ai dans le code.</p>';
+        return null;
+      }
       return { prompt, style, format };
     }
 
@@ -208,102 +212,127 @@
       btnVideo.disabled = disabled;
     }
 
-    function getResolution(format) {
-      if (format === "vertical") return { width: 768, height: 1344 };
-      if (format === "square") return { width: 1024, height: 1024 };
-      return { width: 1280, height: 768 };
+    function getAspectRadio(format) {
+      if (format === "vertical") return "9:16";
+      if (format === "square") return "1:1";
+      return "16:9";
     }
 
+    // 1. GENERATION D'IMAGE (Via Flux Schnell - Ultra rapide et qualitatif)
     async function generateImage() {
-      resultDiv.innerHTML = '<p class="error">L\'API Runway intégrée ici cible la génération vidéo. Utilise le bouton violet "Générer une vidéo".</p>';
-    }
-
-    async function generateVideo() {
       const data = getUserData();
       if (!data) return;
 
-      resultDiv.innerHTML = '<p class="loading">Création de la tâche sur Runway (Gen-3 Alpha)...</p>';
+      resultDiv.innerHTML = '<p class="loading">L\'IA génère ton image (Flux.1)...</p>';
       toggleButtons(true);
 
-      const dimensions = getResolution(data.format);
-
       try {
-        const response = await fetch("https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/image_to_video", {
+        const response = await fetch("https://queue.fal.run/fal-ai/flux/schnell", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${API_KEY}`,
-            "X-Runway-Version": "2024-11-06"
+            "Authorization": `Key ${API_KEY}`
           },
           body: JSON.stringify({
-            promptText: `${data.prompt}, style: ${data.style}`,
-            width: dimensions.width,
-            height: dimensions.height,
-            model: "gen3a_turbo"
+            prompt: `${data.prompt}, style: ${data.style}`,
+            image_size: data.format === "vertical" ? "portrait_4_5" : data.format === "square" ? "square" : "landscape_16_9",
+            sync_mode: true
           })
         });
 
         const result = await response.json();
-
-        if (!response.ok || !result.id) {
-          throw new Error(result.message || "Impossible d'initier la génération. Vérifie les détails de ton forfait Runway.");
+        if (!response.ok || !result.images || result.images.length === 0) {
+          throw new Error(result.detail || "Erreur lors de la création de l'image.");
         }
 
-        // Lance le suivi en temps réel du statut de la vidéo
-        checkVideoStatus(result.id);
-
-      } catch (error) {
+        const imageUrl = result.images[0].url;
         resultDiv.innerHTML = `
-          <p class="error">
-            Erreur lors de la création : ${error.message}
-          </p>
+          <div>
+            <img src="${imageUrl}" alt="Image générée">
+            <br><br>
+            <a href="${imageUrl}" download="image-ia.png" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
+              💾 Télécharger l’image
+            </a>
+          </div>
         `;
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Erreur Image : ${error.message}</p>`;
+      } finally {
         toggleButtons(false);
       }
     }
 
-    async function checkVideoStatus(taskId) {
-      resultDiv.innerHTML = '<p class="loading">L\'IA Runway génère ton clip... (Patiente environ 30 à 60 secondes)</p>';
+    // 2. GENERATION DE VIDEO (Via Luma Dream Machine - Idéal pour le 9:16 et cinématique)
+    async function generateVideo() {
+      const data = getUserData();
+      if (!data) return;
+
+      resultDiv.innerHTML = '<p class="loading">Création de la tâche vidéo (Luma Dream Machine)...</p>';
+      toggleButtons(true);
+
+      try {
+        const response = await fetch("https://queue.fal.run/fal-ai/luma-dream-machine", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Key ${API_KEY}`
+          },
+          body: JSON.stringify({
+            prompt: `${data.prompt}, style: ${data.style}, cinematic look, ultra detailed, 8k`,
+            aspect_ratio: getAspectRadio(data.format)
+          })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.request_id) {
+          throw new Error(result.detail || "Impossible de démarrer la vidéo.");
+        }
+
+        checkVideoStatus(result.request_id);
+
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Erreur Vidéo : ${error.message}</p>`;
+        toggleButtons(false);
+      }
+    }
+
+    async function checkVideoStatus(requestId) {
+      resultDiv.innerHTML = '<p class="loading">L\'IA génère ta scène vidéo... (Environ 30-45 secondes)</p>';
 
       const interval = setInterval(async () => {
         try {
-          const response = await fetch(`https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/tasks/${taskId}`, {
+          const response = await fetch(`https://queue.fal.run/fal-ai/luma-dream-machine/requests/${requestId}`, {
             method: "GET",
-            headers: {
-              "Authorization": `Bearer ${API_KEY}`,
-              "X-Runway-Version": "2024-11-06"
-            }
+            headers: { "Authorization": `Key ${API_KEY}` }
           });
 
-          const task = await response.json();
+          const statusData = await response.json();
 
-          if (task.status === "SUCCEEDED") {
+          if (statusData.status === "COMPLETED" && statusData.video) {
             clearInterval(interval);
             toggleButtons(false);
-            
-            const videoUrl = task.output[0];
 
+            const videoUrl = statusData.video.url;
             resultDiv.innerHTML = `
               <div>
                 <video src="${videoUrl}" controls autoplay loop></video>
                 <br><br>
-                <a href="${videoUrl}" download="video-runway.mp4" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
-                  💾 Télécharger la vidéo Runway
+                <a href="${videoUrl}" download="video-ia.mp4" target="_blank" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
+                  💾 Télécharger la vidéo 9:16
                 </a>
               </div>
             `;
-          } else if (task.status === "FAILED") {
+          } else if (statusData.status === "FAILED") {
             clearInterval(interval);
             toggleButtons(false);
-            resultDiv.innerHTML = `<p class="error">La génération Runway a échoué : ${task.error || "Erreur interne de traitement."}</p>`;
+            resultDiv.innerHTML = `<p class="error">La génération de la vidéo a échoué.</p>`;
           }
-
         } catch (error) {
           clearInterval(interval);
           toggleButtons(false);
           resultDiv.innerHTML = `<p class="error">Erreur de suivi : ${error.message}</p>`;
         }
-      }, 4000); // Vérifie le statut toutes les 4 secondes
+      }, 4000);
     }
   </script>
 </body>
