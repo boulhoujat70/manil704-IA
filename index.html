@@ -227,7 +227,7 @@
         const response = await fetch("RMPLACER_PAR_URL_API_DE_TON_FOURNISSEUR", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+           const response = await fetch("https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/image_to_video", {
             "Authorization": `Bearer ${API_KEY}` // Ta clé est injectée ici de manière automatique
           },
           body: JSON.stringify({
@@ -261,7 +261,7 @@
             <small>Vérifie la validité de ta clé et l'URL de l'API configurée.</small>
           </p>
         `;
-      } finally {
+     const response = await fetch(`https://cors-anywhere.herokuapp.com/https://api.v1.runwayml.com/v1/tasks/${taskId}`, {
         toggleButtons(false);
       }
     }
