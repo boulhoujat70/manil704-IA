@@ -1,78 +1,76 @@
 {
-  "name": "MANIL704 Studio AI Platform",
+  "id": "/manil704-IA/",
+  "name": "MANIL704 Studio IA",
   "short_name": "MANIL704",
   "description": "Studio IA MANIL704 avec agents TikTok, hooks, scripts et analyse de contenu.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
   "background_color": "#050505",
   "theme_color": "#050505",
   "lang": "fr-FR",
+  "dir": "ltr",
   "categories": [
     "productivity",
+    "business",
     "utilities"
   ],
   "icons": [
     {
-      "src": "icons/icon-72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-180.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
       "src": "icons/icon-192.png",
+      "type": "image/png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-384.png",
-      "sizes": "384x384",
-      "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "icons/icon-512.png",
-      "sizes": "512x512",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "icons/maskable-512.png",
-      "sizes": "512x512",
+      "src": "icons/maskable-192.png",
       "type": "image/png",
+      "sizes": "192x192",
       "purpose": "maskable"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/desktop.png",
+      "type": "image/png",
+      "sizes": "1280x720",
+      "form_factor": "wide",
+      "label": "MANIL704 Studio IA sur ordinateur"
+    },
+    {
+      "src": "screenshots/mobile.png",
+      "type": "image/png",
+      "sizes": "390x844",
+      "form_factor": "narrow",
+      "label": "MANIL704 Studio IA sur mobile"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouveau chat",
+      "short_name": "Chat",
+      "description": "Ouvrir le studio IA",
+      "url": "./",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
